@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+  <Project Path="EFoodAPI/EFoodAPI.csproj" />
+  <Project Path="EFoodConsole/EFoodConsole.csproj" Id="cb4ef1e5-2585-4439-b2ae-3d3788319e7b" />
+  <Project Path="EFoodWeb/EFoodWeb.Client/EFoodWeb.Client.csproj" Id="c010f0af-6820-42da-b5f8-2d1ec1003954" />
+  <Project Path="EFoodWeb/EFoodWeb/EFoodWeb.csproj" Id="17e8071c-9fc2-489f-853c-55d2a1fd5607" />
+</Solution>

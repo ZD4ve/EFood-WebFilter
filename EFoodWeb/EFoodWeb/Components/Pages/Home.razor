@@ -1,0 +1,629 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>E-Food Menü</PageTitle>
+
+<div class="page-header">
+    <div class="page-header-content">
+        <div>
+            <h1>🍽️ e-Food Heti Menü</h1>
+            <p class="subtitle">Szűrű és kereső</p>
+        </div>
+        <a href="https://rendel.e-food.hu" target="_blank" rel="noopener noreferrer" class="efood-link-button">
+            <span>e-Food oldala</span>
+        </a>
+    </div>
+</div>
+
+<div class="filters-container">
+    <div class="filter-section">
+        <h6 class="filter-title">📅 Időpont</h6>
+        <div class="filter-row">
+            <div class="filter-item">
+                <label for="weekSelect" class="form-label">Hét</label>
+                <select id="weekSelect" class="form-select" @bind="SelectedWeekOffset" @bind:after="LoadFoods">
+                    <option value="0">Ezen a héten</option>
+                    <option value="1">Következő héten</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label for="daySelect" class="form-label">Nap</label>
+                <select id="daySelect" class="form-select" @bind="SelectedDate">
+                    @foreach (var date in AvailableDates)
+                    {
+                        <option value="@date.ToString("yyyy-MM-dd")">@date.ToString("dddd, MMM d", new System.Globalization.CultureInfo("hu-HU"))</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-section">
+        <h6 class="filter-title">🔍 Szűrők</h6>
+        <div class="filter-row">
+            <div class="filter-group">
+                <label class="filter-group-label">Kalória</label>
+                <div class="filter-range">
+                    <div class="filter-item-small">
+                        <label for="minCalories" class="form-label-small">Min</label>
+                        <input type="number" id="minCalories" class="form-control form-control-sm" placeholder="0" @bind="MinCalories" />
+                    </div>
+                    <span class="range-separator">—</span>
+                    <div class="filter-item-small">
+                        <label for="maxCalories" class="form-label-small">Max</label>
+                        <input type="number" id="maxCalories" class="form-control form-control-sm" placeholder="∞" @bind="MaxCalories" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <label class="filter-group-label">Fehérje</label>
+                <div class="filter-range">
+                    <div class="filter-item-small">
+                        <label for="minProtein" class="form-label-small">Min</label>
+                        <input type="number" id="minProtein" class="form-control form-control-sm" placeholder="0" @bind="MinProtein" />
+                    </div>
+                    <span class="range-separator">—</span>
+                    <div class="filter-item-small">
+                        <label for="maxProtein" class="form-label-small">Max</label>
+                        <input type="number" id="maxProtein" class="form-control form-control-sm" placeholder="∞" @bind="MaxProtein" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-item">
+                <label for="sortBy" class="form-label">Rendezés</label>
+                <select id="sortBy" class="form-select" @bind="SortBy">
+                    <option value="HighestProtein">⬆️ Legtöbb fehérje</option>
+                    <option value="HighestScore">⭐ Legjobb arány</option>
+                    <option value="HighestCalories">⬆️ Legtöbb kalória</option>
+                    <option value="LowestCalories">⬇️ Legkevesebb kalória</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (IsLoading)
+{
+    <div class="loading-state">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Betöltés...</span>
+        </div>
+        <p>Betöltés...</p>
+    </div>
+}
+else if (Foods is not null && Foods.Count > 0)
+{
+    <div class="results-container">
+        @foreach (var dayGroup in FilteredAndSortedFoods.GroupBy(f => f.Date).OrderBy(g => g.Key))
+        {
+            <div class="day-section">
+                <h3 class="day-header">@dayGroup.Key.ToString("dddd, MMMM d", new System.Globalization.CultureInfo("hu-HU"))</h3>
+
+                <div class="food-grid">
+                    @foreach (var food in dayGroup)
+                    {
+                        <FoodCard Food="food" 
+                                  IsSelected="SelectedFoods.Contains(food)" 
+                                  OnToggleSelection="ToggleFoodSelection" />
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+else if (!IsLoading)
+{
+    <div class="empty-state">
+        <div class="empty-icon">🍽️</div>
+        <p>Nincsenek elérhető ételek erre a hétre.</p>
+    </div>
+}
+
+@if (SelectedFoods.Count > 0)
+{
+    <div class="floating-info-panel">
+        <div class="selected-foods-names">
+            @foreach (var food in SelectedFoods)
+            {
+                <div class="food-name-item">@food.Name</div>
+            }
+        </div>
+        <div class="selected-foods-stats">
+            <div class="stat">
+                <span class="stat-value">@TotalCalories.ToString("0")</span>
+                <span class="stat-label">kcal</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value">@TotalProtein.ToString("0.0")</span>
+                <span class="stat-label">fehérje</span>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<EFoodAPI.Food>? Foods;
+    private bool IsLoading = true;
+    private int SelectedWeekOffset;
+    private string SelectedDate = "";
+
+    private double? MinCalories;
+    private double? MaxCalories;
+    private double? MinProtein;
+    private double? MaxProtein;
+    private string SortBy = "HighestProtein";
+
+    private Dictionary<DateOnly, HashSet<EFoodAPI.Food>> SelectionsByDate = new();
+
+    private DateOnly CurrentDateOnly => string.IsNullOrWhiteSpace(SelectedDate) 
+        ? DateOnly.FromDateTime(DateTime.Now) 
+        : DateOnly.Parse(SelectedDate);
+
+    private HashSet<EFoodAPI.Food> SelectedFoods
+    {
+        get
+        {
+            if (!SelectionsByDate.ContainsKey(CurrentDateOnly))
+            {
+                SelectionsByDate[CurrentDateOnly] = new HashSet<EFoodAPI.Food>();
+            }
+            return SelectionsByDate[CurrentDateOnly];
+        }
+    }
+
+    private double TotalCalories => SelectedFoods.Sum(f => f.Calories);
+    private double TotalProtein => SelectedFoods.Sum(f => f.Protein);
+
+    private List<DateOnly> AvailableDates => 
+        Foods?.Select(f => f.Date).Distinct().OrderBy(d => d).ToList() ?? new List<DateOnly>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var dayAfterTomorrow = DateOnly.FromDateTime(DateTime.Now.AddDays(2));
+        var currentWeek = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
+        var dayAfterTomorrowWeek = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now.AddDays(2));
+
+        SelectedWeekOffset = dayAfterTomorrowWeek - currentWeek;
+
+        await LoadFoods();
+
+        if (AvailableDates.Contains(dayAfterTomorrow))
+        {
+            SelectedDate = dayAfterTomorrow.ToString("yyyy-MM-dd");
+        }
+        else if (AvailableDates.Count > 0)
+        {
+            SelectedDate = AvailableDates[0].ToString("yyyy-MM-dd");
+        }
+    }
+
+    private async Task LoadFoods()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            Foods = await global::EFoodAPI.EFoodAPI.GetFoods(SelectedWeekOffset);
+        }
+        catch (Exception ex)
+        {
+            Foods = new List<EFoodAPI.Food>();
+            Console.WriteLine($"Error loading foods: {ex.Message}");
+        }
+
+        IsLoading = false;
+
+        var tomorrow = DateOnly.FromDateTime(DateTime.Now.AddDays(1));
+        if (AvailableDates.Contains(tomorrow))
+        {
+            SelectedDate = tomorrow.ToString("yyyy-MM-dd");
+        }
+        else if (AvailableDates.Count > 0)
+        {
+            SelectedDate = AvailableDates[0].ToString("yyyy-MM-dd");
+        }
+    }
+
+    private IEnumerable<EFoodAPI.Food> FilteredAndSortedFoods
+    {
+        get
+        {
+            if (Foods is null) return Enumerable.Empty<EFoodAPI.Food>();
+
+            IEnumerable<EFoodAPI.Food> result = Foods;
+
+            result = result.Where(f => f.Orderable);
+
+            if (!string.IsNullOrWhiteSpace(SelectedDate))
+            {
+                var selectedDateOnly = DateOnly.Parse(SelectedDate);
+                result = result.Where(f => f.Date == selectedDateOnly);
+            }
+
+            if (MinCalories.HasValue)
+            {
+                result = result.Where(f => f.Calories >= MinCalories.Value);
+            }
+
+            if (MaxCalories.HasValue)
+            {
+                result = result.Where(f => f.Calories <= MaxCalories.Value);
+            }
+
+            if (MinProtein.HasValue)
+            {
+                result = result.Where(f => f.Protein >= MinProtein.Value);
+            }
+
+            if (MaxProtein.HasValue)
+            {
+                result = result.Where(f => f.Protein <= MaxProtein.Value);
+            }
+
+            result = SortBy switch
+            {
+                "HighestProtein" => result.OrderByDescending(f => f.Protein),
+                "HighestScore" => result.OrderByDescending(f => f.ProteinPer100Calorie),
+                "HighestCalories" => result.OrderByDescending(f => f.Calories),
+                "LowestCalories" => result.OrderBy(f => f.Calories),
+                _ => result.OrderBy(f => f.Date)
+            };
+
+            return result;
+        }
+    }
+
+    private void ToggleFoodSelection(EFoodAPI.Food food)
+    {
+        if (SelectedFoods.Contains(food))
+        {
+            SelectedFoods.Remove(food);
+        }
+        else
+        {
+            SelectedFoods.Add(food);
+        }
+    }
+}
+
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .page-header h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .page-header .subtitle {
+        margin: 0;
+        font-size: 1rem;
+        opacity: 0.95;
+    }
+
+    .efood-link-button {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        padding: 0.625rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        transition: all 0.2s;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        white-space: nowrap;
+    }
+
+    .efood-link-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .efood-favicon {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+    }
+
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e5e7eb;
+    }
+
+    .filter-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .filter-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-item {
+        flex: 1;
+        min-width: 180px;
+    }
+
+    .filter-item .form-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.375rem;
+    }
+
+    .filter-item .form-select,
+    .filter-item .form-control {
+        border-radius: 8px;
+        border: 1.5px solid #d1d5db;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9375rem;
+        transition: all 0.2s;
+    }
+
+    .filter-item .form-select:focus,
+    .filter-item .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-group-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+    }
+
+    .filter-range {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    .filter-item-small {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .form-label-small {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .filter-item-small .form-control-sm {
+        width: 80px;
+        border-radius: 6px;
+        border: 1.5px solid #d1d5db;
+        padding: 0.375rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .filter-item-small .form-control-sm:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .range-separator {
+        color: #9ca3af;
+        font-weight: 500;
+        padding-bottom: 0.375rem;
+    }
+
+    .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+    }
+
+    .loading-state .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+        background: white;
+        border-radius: 12px;
+        border: 2px dashed #d1d5db;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .results-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .day-section {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e5e7eb;
+    }
+
+    .day-header {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0 0 1.25rem 0;
+        padding-bottom: 0.75rem;
+        border-bottom: 3px solid #667eea;
+    }
+
+    .food-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .floating-info-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+        z-index: 1000;
+        animation: slideUp 0.3s ease-out;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    @@keyframes slideUp {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    .selected-foods-names {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        overflow-y: auto;
+        max-height: 150px;
+    }
+
+    .food-name-item {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0.25rem 0;
+    }
+
+    .selected-foods-stats {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    @@media (max-width: 768px) {
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .filter-row {
+            flex-direction: column;
+        }
+
+        .filter-item {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .filter-item-small .form-control-sm {
+            width: 100%;
+        }
+
+        .floating-info-panel {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 1rem;
+        }
+
+        .selected-foods-names {
+            text-align: center;
+            padding-right: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .selected-foods-stats {
+            justify-content: center;
+            gap: 3rem;
+        }
+    }
+</style>
+

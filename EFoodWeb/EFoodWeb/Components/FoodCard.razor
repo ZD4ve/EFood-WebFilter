@@ -1,0 +1,225 @@
+<div class="food-card @(IsSelected ? "selected" : "")" @onclick="OnClick">
+    <div class="food-header">
+        <h5 class="food-name">@Food.Name</h5>
+        <span class="protein-ratio">@Food.ProteinPer100Calorie.ToString("0.0")</span>
+    </div>
+
+    <div class="food-body">
+        <div class="food-image">
+            @if (!ImageLoaded)
+            {
+                <div class="image-placeholder">
+                    @if (ImageError)
+                    {
+                        <span>Nincs kép</span>
+                    }
+                </div>
+            }
+            <img src="@Food.ImageUrl" 
+                 alt="@Food.Name" 
+                 style="@(ImageLoaded ? "display: block;" : "display: none;")"
+                 @onload="OnImageLoaded"
+                 @onerror="OnImageError" />
+        </div>
+
+        <div class="food-macros">
+            <div class="macro-row important">
+                <span class="macro-label">Kalória:</span>
+                <span class="macro-value">@Food.Calories.ToString("0") kcal</span>
+            </div>
+            <div class="macro-row important">
+                <span class="macro-label">Fehérje:</span>
+                <span class="macro-value">@Food.Protein.ToString("0.0")g</span>
+            </div>
+            <div class="macro-row">
+                <span class="macro-label">Szénhidrát:</span>
+                <span class="macro-value">@Food.Carbohydrates.ToString("0.0")g</span>
+            </div>
+            <div class="macro-row">
+                <span class="macro-label">Zsír:</span>
+                <span class="macro-value">@Food.Fat.ToString("0.0")g</span>
+            </div>
+            <div class="food-price">
+                @Food.Price Ft
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .food-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1.25rem;
+        background: #fafafa;
+        transition: all 0.3s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .food-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .food-card.selected {
+        background: #fefce8;
+        border-color: #facc15;
+        box-shadow: 0 4px 12px rgba(250, 204, 21, 0.3);
+    }
+
+    .food-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+        padding-bottom: 0.875rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .food-name {
+        margin: 0;
+        flex: 1;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+        line-height: 1.4;
+    }
+
+    .protein-ratio {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.875rem;
+        margin-left: 0.75rem;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    }
+
+    .food-body {
+        display: grid;
+        grid-template-columns: minmax(350px, auto) 1fr;
+        gap: 1.25rem;
+        align-items: start;
+    }
+
+    .food-image {
+        grid-column: 1;
+        grid-row: 1;
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .image-placeholder {
+        width: 317px;
+        height: 190px;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 0.875rem;
+        border: 2px dashed #d1d5db;
+    }
+
+    .food-image img {
+        height: 190px;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+    }
+
+    .food-macros {
+        grid-column: 2;
+        grid-row: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+        min-height: 150px;
+    }
+
+    .macro-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.25rem 0;
+        border-radius: 4px;
+    }
+
+    .macro-row.important {
+        font-weight: 600;
+        font-size: 0.9375rem;
+        background: white;
+        padding: 0.375rem 0.5rem;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .macro-label {
+        color: #6b7280;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .macro-row.important .macro-label {
+        color: #374151;
+        font-size: 0.9375rem;
+    }
+
+    .macro-value {
+        color: #1f2937;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .macro-row.important .macro-value {
+        color: #667eea;
+        font-size: 0.9375rem;
+    }
+
+    .food-price {
+        margin-top: auto;
+        padding-top: 0.5rem;
+        border-top: 2px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        text-align: right;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public EFoodAPI.Food Food { get; set; } = null!;
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public EventCallback<EFoodAPI.Food> OnToggleSelection { get; set; }
+
+    private bool ImageLoaded = false;
+    private bool ImageError = false;
+
+    private void OnImageLoaded()
+    {
+        ImageLoaded = true;
+    }
+
+    private void OnImageError()
+    {
+        ImageError = true;
+        ImageLoaded = false;
+    }
+
+    private async Task OnClick()
+    {
+        await OnToggleSelection.InvokeAsync(Food);
+    }
+}

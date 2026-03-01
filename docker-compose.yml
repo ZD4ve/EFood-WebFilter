@@ -1,0 +1,10 @@
+services:
+  efoodweb:
+    image: ${DOCKER_REGISTRY-}efoodweb
+    build:
+      context: .
+      dockerfile: EFoodWeb/EFoodWeb/Dockerfile
+    ports:
+      - "5795:8080"
+    environment:
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
