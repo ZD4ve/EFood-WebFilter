@@ -1,0 +1,193 @@
+.food-card {
+    border: 1px solid var(--line-mid);
+    border-radius: 0.6rem;
+    padding: 0.9rem;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--concrete-100) 85%, white 15%) 0%, var(--concrete-100) 100%);
+    box-shadow: var(--depth-1);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.food-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--depth-2);
+    border-color: var(--line-strong);
+}
+
+.food-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px var(--focus-ring), var(--depth-2);
+}
+
+.food-card.is-selected {
+    border-color: var(--line-strong);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--ochre-100) 45%, var(--concrete-100) 55%) 0%, color-mix(in srgb, var(--concrete-100) 74%, var(--ochre-100) 26%) 100%);
+    box-shadow: 0 14px 30px rgba(74, 63, 40, 0.19);
+}
+
+.food-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.6rem;
+    align-items: flex-start;
+    border-bottom: 2px solid var(--line-mid);
+    padding-bottom: 0.52rem;
+    margin-bottom: 0.75rem;
+}
+
+.food-name {
+    margin: 0;
+    color: var(--charcoal-900);
+    font-size: clamp(1rem, 1.05vw, 1.16rem);
+    line-height: 1.32;
+}
+
+.protein-ratio {
+    white-space: nowrap;
+    border: 1px solid var(--line-strong);
+    background: linear-gradient(145deg, var(--brass-400), var(--ochre-200));
+    color: var(--charcoal-900);
+    font-family: var(--font-mono);
+    font-size: 0.67rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.24rem 0.52rem;
+}
+
+.food-body {
+    display: grid;
+    grid-template-columns: minmax(280px, 2fr) minmax(220px, 1fr);
+    gap: 0.85rem;
+}
+
+.food-image {
+    position: relative;
+    min-height: 190px;
+    border: 1px solid var(--line-mid);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--concrete-200) 70%, white 30%) 0,
+            color-mix(in srgb, var(--concrete-200) 70%, white 30%) 22px,
+            color-mix(in srgb, var(--concrete-100) 82%, white 18%) 22px,
+            color-mix(in srgb, var(--concrete-100) 82%, white 18%) 44px
+        );
+}
+
+.food-image img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.28s ease;
+    background: color-mix(in srgb, var(--concrete-100) 90%, white 10%);
+}
+
+.food-image.is-loaded img {
+    opacity: 1;
+}
+
+.image-placeholder {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 0.8rem;
+    color: var(--charcoal-600);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.66rem;
+}
+
+.image-placeholder.error {
+    display: none;
+}
+
+.image-placeholder.loading {
+    color: var(--charcoal-500);
+    animation: pulse 1.1s ease-in-out infinite alternate;
+}
+
+.food-image.is-loaded .image-placeholder {
+    display: none;
+}
+
+.food-image.is-error .image-placeholder.loading {
+    display: none;
+}
+
+.food-image.is-error .image-placeholder.error {
+    display: grid;
+}
+
+@keyframes pulse {
+    from {
+        opacity: 0.52;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.food-macros {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.macro-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.4rem 0.45rem;
+    border: 1px solid transparent;
+    border-radius: 0.35rem;
+}
+
+.macro-row.important {
+    border-color: var(--line-mid);
+    background: color-mix(in srgb, var(--concrete-100) 70%, white 30%);
+}
+
+.macro-label {
+    color: var(--charcoal-600);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.65rem;
+}
+
+.macro-value {
+    color: var(--charcoal-900);
+    font-weight: 600;
+}
+
+.food-price {
+    margin-top: auto;
+    text-align: right;
+    border-top: 2px solid var(--line-mid);
+    padding-top: 0.48rem;
+    color: var(--charcoal-900);
+    font-family: var(--font-display);
+    letter-spacing: 0.04em;
+}
+
+@media (max-width: 700px) {
+    .food-body {
+        grid-template-columns: 1fr;
+    }
+
+    .food-image {
+        min-height: 220px;
+    }
+}

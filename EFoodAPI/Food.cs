@@ -25,7 +25,7 @@ public class Food
 
     public double ProteinPer100Calorie => (Protein / Calories) * 100;
     public override string? ToString() => Name;
-    public string ImageUrl => $"https://ea.e-food.hu/api/v1/i?menu_item_id={Id}";
+    public string ImageUrl => $"https://ea.e-food.hu/api/v1/i?menu_item_id={Id}&width=1024&height=1024";
 
 }
 
